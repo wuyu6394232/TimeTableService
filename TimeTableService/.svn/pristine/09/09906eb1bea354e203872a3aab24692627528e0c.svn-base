@@ -1,5 +1,0 @@
-com\yg\timetableservice\struct\Turn.class
-com\yg\timetableservice\struct\PositionTurn.class
-com\yg\timetableservice\struct\ReturnResult.class
-com\yg\timetableservice\struct\ReturnResult$HttpReturnResult.class
-com\yg\timetableservice\listener\WebListener.class
