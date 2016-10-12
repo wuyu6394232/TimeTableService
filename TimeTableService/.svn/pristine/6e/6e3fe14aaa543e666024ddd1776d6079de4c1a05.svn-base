@@ -1,0 +1,45 @@
+package com.yg.timetableservice.rxjava;
+
+
+import com.alibaba.fastjson.JSONArray;
+import com.yg.timetableservice.struct.PositionTurn;
+import com.yg.timetableservice.struct.Turn;
+import com.yg.timetableservice.util.TimeUtil;
+import rx.functions.Func1;
+
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
+import java.util.Date;
+
+public class GetTurnsMapper implements Func1<Object, JSONArray> {
+    private long timestamp;
+    @Override
+    public JSONArray call(Object o) {
+        if (!(o instanceof JSONArray))
+            return new JSONArray();
+        JSONArray allTurns = (JSONArray) o;
+        JSONArray vaildTurns = new JSONArray();
+        Calendar queryCalendar = Calendar.getInstance();
+        queryCalendar.setTime(new Date(timestamp * 1000));
+        TimeUtil queryTime = new TimeUtil(queryCalendar);
+        for (Object ob : allTurns) {
+            if (ob instanceof Turn) {
+                Turn turn = (Turn)ob;
+                TimeUtil arriveTime = new TimeUtil(turn.arriveTime);
+                if (arriveTime.compareTo(queryTime) == 1) {
+                    PositionTurn positionTurn = new PositionTurn();
+                    positionTurn.turn = turn;
+                    vaildTurns.add(positionTurn);
+                }
+            }
+        }
+        return vaildTurns;
+    }
+
+    public GetTurnsMapper(long timestamp) {
+        this.timestamp = timestamp;
+    }
+
+
+}

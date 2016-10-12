@@ -1,0 +1,76 @@
+package com.yg.last.bus.service.util;
+
+
+import com.alibaba.fastjson.JSONObject;
+import org.apache.http.HttpEntity;
+import org.apache.http.HttpResponse;
+import org.apache.http.client.ResponseHandler;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.concurrent.FutureCallback;
+import org.apache.http.impl.nio.client.CloseableHttpAsyncClient;
+import org.apache.http.impl.nio.client.HttpAsyncClients;
+import org.apache.http.nio.client.HttpAsyncClient;
+import org.apache.http.util.EntityUtils;
+import rx.Observable;
+
+import java.io.IOException;
+
+
+public class HttpUtil {
+    private static String timePredictUrl = "http://api.chelaile.net.cn:7000/TimePrediction/prediction" +
+            "?cityId=%s&lineNo=%s&direction=%d&nextStopOrder=%d&distToNextStop=0&delayedSeconds=0&station=%d";
+    private static CloseableHttpAsyncClient httpclient = HttpAsyncClients.createDefault();
+
+    static {
+        httpclient.start();
+    }
+    public static void stop() {
+        try {
+            httpclient.close();
+        } catch (IOException e) {
+        }
+    }
+    public static Observable<Integer> acyncGetPredictTime(String cityId, String lineNo, int direction,
+                                                          int beginOrder, int endOrder) {
+        String url = String.format(timePredictUrl, cityId, lineNo, direction, beginOrder, endOrder);
+        HttpGet httpGet = new HttpGet(url);
+        return Observable.create(subscriber -> {
+            httpclient.execute(httpGet, new FutureCallback<HttpResponse>() {
+                @Override
+                public void completed(final HttpResponse response) {
+                    try {
+                        HttpEntity entity = response.getEntity();
+                        if (entity != null) {
+                            String result = EntityUtils.toString(entity);
+                            result = result.replace("**YGKJ", "");
+                            result = result.replace("YGKJ##", "");
+                            JSONObject citiesRes = JSONObject.parseObject(result);
+                            if (citiesRes.getInteger("status").equals(0)) {
+                                JSONObject res = citiesRes.getJSONObject("data").getJSONObject("1").getJSONObject("timePrediction");
+                                int costTime = res.getInteger(String.valueOf(endOrder));
+                                LogUtil.asyncDebug("timepredict", cityId, lineNo, direction, beginOrder, endOrder, costTime);
+                                subscriber.onNext(costTime);
+                            } else {
+                                subscriber.onNext(-1);
+                            }
+                        } else {
+                            subscriber.onNext(-1);
+                        }
+                    } catch (Exception e) {
+                        subscriber.onNext(-1);
+                    }
+                }
+
+                @Override
+                public void failed(final Exception ex) {
+                    subscriber.onNext(-1);
+                }
+
+                @Override
+                public void cancelled() {
+                    subscriber.onNext(-1);
+                }
+            });
+        });
+    }
+}

@@ -1,0 +1,10 @@
+package com.yg.timetableservice.struct;
+
+
+public class Turn {
+    public String departTime;
+    public String arriveTime;
+    public double accuracy;
+    public int isFaked;
+    public String calcTime;
+}

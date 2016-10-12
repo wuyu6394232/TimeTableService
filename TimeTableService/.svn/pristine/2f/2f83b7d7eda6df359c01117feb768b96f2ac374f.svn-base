@@ -1,0 +1,52 @@
+package com.yg.timetableservice.rxjava;
+
+
+import com.alibaba.fastjson.JSONArray;
+import com.alibaba.fastjson.JSONObject;
+import com.yg.timetableservice.struct.HISResult;
+import com.yg.timetableservice.struct.ReturnResult;
+import rx.functions.Func1;
+
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.List;
+
+public class GetResultMapper implements Func1<JSONArray, ReturnResult> {
+    @Override
+    public ReturnResult call(JSONArray allturns) {
+        List<HISResult> data = new ArrayList<>();
+        SimpleDateFormat sdf = new SimpleDateFormat("HH:mm");
+
+        for (Object o : allturns) {
+            Calendar arriveTime = (Calendar)((JSONArray)o).get(1);
+            String dateStr = sdf.format(arriveTime.getTime());
+            HISResult hisResult = new HISResult();
+            hisResult.maxArrivalTime = hisResult.minArrivalTime = hisResult.bestArrivalTime = dateStr;
+            hisResult.accuracy = ((JSONArray)o).getDouble(2);
+            int type = ((JSONArray)o).getInteger(2);
+            switch (type) {
+                case 0:
+                    hisResult.dataSource = "history";
+                    break;
+                case 1:
+                    hisResult.dataSource = "forge";
+                    break;
+                default:
+                    hisResult.dataSource = "forge";
+            }
+            Calendar calendar = Calendar.getInstance();
+            if (arriveTime.get(Calendar.DAY_OF_YEAR) == calendar.get(Calendar.DAY_OF_YEAR) + 1) {
+                hisResult.nextDayFlag = 1;
+            } else {
+                hisResult.nextDayFlag = 0;
+            }
+            data.add(hisResult);
+        }
+        ReturnResult returnResult = new ReturnResult();
+        ReturnResult.HttpReturnResult httpReturnResult = new ReturnResult.HttpReturnResult();
+        httpReturnResult.data = data;
+        returnResult.jsonr = httpReturnResult;
+        return returnResult;
+    }
+}

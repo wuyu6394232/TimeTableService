@@ -1,0 +1,48 @@
+package com.yg.timetableservice.controller;
+
+import com.alibaba.fastjson.JSONArray;
+import com.yg.timetableservice.ocs.OCSUtil;
+import com.yg.timetableservice.rxjava.GetPageMapper;
+import com.yg.timetableservice.rxjava.GetResultMapper;
+import com.yg.timetableservice.rxjava.GetTurnsMapper;
+import com.yg.timetableservice.rxjava.ReturnResultSubscriber;
+import com.yg.timetableservice.struct.ReturnResult;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.context.request.async.DeferredResult;
+import rx.Observable;
+import rx.Subscriber;
+
+/**
+ * get turns by station
+ */
+@Controller
+public class StationTurnsController {
+
+    @Autowired
+    private OCSUtil ocsUtil;
+
+    @ResponseBody
+    @RequestMapping("/timetable")
+    public DeferredResult<String> getTurns(@RequestParam(value="cityId") final String cityId,
+                                           @RequestParam(value="lineNo") final String lineNo,
+                                           @RequestParam(value="direction") final String direction,
+                                           @RequestParam(value="order") final String order,
+                                           @RequestParam(value="show_hs_car_icon") final int showHsCarIcon,
+                                           @RequestParam(value="timestamp") final int timestamp,
+                                           @RequestParam(value="page", defaultValue="3") final int page) {
+
+        final DeferredResult<String> deferredResult = new DeferredResult<>();
+
+        String ocsKey = cityId + "#" + lineNo + "#" + direction + "#" + order;
+        Observable<Object> observable = ocsUtil.asyncGetData(ocsKey, new JSONArray());
+        Observable<JSONArray> turnsObservable = observable.map(new GetTurnsMapper(timestamp));
+        Observable<JSONArray> pageObservable = turnsObservable.map(new GetPageMapper(page));
+        Observable<ReturnResult> resultObservable = pageObservable.map(new GetResultMapper());
+        resultObservable.subscribe(new ReturnResultSubscriber(deferredResult));
+        return deferredResult;
+    }
+}

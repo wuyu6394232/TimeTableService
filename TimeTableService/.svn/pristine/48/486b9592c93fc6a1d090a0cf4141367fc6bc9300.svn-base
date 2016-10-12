@@ -1,0 +1,33 @@
+package com.yg.timetableservice.rxjava;
+
+
+import com.alibaba.fastjson.JSONArray;
+import com.yg.timetableservice.struct.PositionTurn;
+import com.yg.timetableservice.struct.Turn;
+import com.yg.timetableservice.util.TimeUtil;
+import javafx.geometry.Pos;
+import rx.functions.Func1;
+
+import java.util.Calendar;
+import java.util.Collections;
+
+public class GetPageMapper implements Func1<JSONArray, JSONArray> {
+    private int page;
+    @Override
+    public JSONArray call(JSONArray allturns) {
+        Collections.sort(allturns, ((o1, o2) -> {
+            PositionTurn turn1 = (PositionTurn)o1;
+            PositionTurn turn2 = (PositionTurn)o2;
+            TimeUtil time1 = new TimeUtil(turn1.turn.arriveTime);
+            TimeUtil time2 = new TimeUtil(turn2.turn.arriveTime);
+            return time1.compareTo(time2);
+        }));
+        JSONArray result = new JSONArray();
+        for (int i = 0; i < page && i < allturns.size(); i++)
+            result.add(allturns.get(i));
+        return result;
+    }
+    public GetPageMapper(int page) {
+        this.page = page;
+    }
+}

@@ -1,0 +1,63 @@
+package com.yg.timetableservice.rxjava;
+
+
+import com.alibaba.fastjson.JSONArray;
+import com.alibaba.fastjson.JSONObject;
+import com.yg.timetableservice.struct.PositionTurn;
+import com.yg.timetableservice.struct.Turn;
+import com.yg.timetableservice.util.LogUtil;
+import com.yg.timetableservice.util.TimeUtil;
+import rx.functions.Func1;
+
+import java.util.Calendar;
+import java.util.Date;
+
+public class GetTurnsMapper implements Func1<Object, JSONArray> {
+    private long timestamp;
+    private int page;
+    @Override
+    public JSONArray call(Object o) {
+        if (!(o instanceof JSONArray))
+            return new JSONArray();
+        JSONArray allTurns = (JSONArray) o;
+        LogUtil.asyncDebug(new Object[]{"ocs all turns:", allTurns});
+        JSONArray vaildTurns = new JSONArray();
+        Calendar queryCalendar = Calendar.getInstance();
+        queryCalendar.setTime(new Date(timestamp * 1000));
+        TimeUtil queryTime = new TimeUtil(queryCalendar);
+        int currentCount = 0;
+        for (Object ob : allTurns) {
+            if (ob instanceof JSONObject) {
+                Turn turn = JSONObject.toJavaObject((JSONObject) ob, Turn.class);
+                TimeUtil arriveTime = new TimeUtil(turn.arriveTime);
+                if (arriveTime.compareTo(queryTime) == 1) {
+                    PositionTurn positionTurn = new PositionTurn();
+                    positionTurn.turn = turn;
+                    positionTurn.nextDayFlag = 0;
+                    if (currentCount < page) {
+                        vaildTurns.add(positionTurn);
+                        currentCount ++;
+                    }
+                }
+            }
+        }
+        //if not contains enough turns, find from next day
+
+        for (int i = 0; i < page - currentCount && i < allTurns.size() - currentCount; i++) {
+            JSONObject ob = allTurns.getJSONObject(i);
+            PositionTurn positionTurn = new PositionTurn();
+            positionTurn.turn = JSONObject.toJavaObject(ob, Turn.class);
+            positionTurn.nextDayFlag = 1;
+            vaildTurns.add(positionTurn);
+        }
+        LogUtil.asyncDebug(new Object[]{"get turns output:", vaildTurns});
+        return vaildTurns;
+    }
+
+    public GetTurnsMapper(long timestamp, int page) {
+        this.timestamp = timestamp;
+        this.page = page;
+    }
+
+
+}

@@ -1,0 +1,7 @@
+package com.yg.timetableservice.struct;
+
+
+public class PositionTurn {
+    public Turn turn;
+    public int nextStopOrder = -1;
+}

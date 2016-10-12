@@ -1,0 +1,55 @@
+package com.yg.timetableservice.rxjava;
+
+import com.alibaba.fastjson.JSONArray;
+import com.alibaba.fastjson.JSONObject;
+import com.yg.timetableservice.ocs.OCSUtil;
+import org.springframework.beans.factory.annotation.Autowired;
+import rx.Observable;
+import rx.functions.Func1;
+import rx.functions.Func2;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
+public class GetPositionFlatMapper implements Func1<JSONArray, Observable<JSONArray>> {
+    //zip result:[[beginTime,arriveTime,accrucy,iffaked,nextOrder],["2016-07-01 06:30:08","2016-07-01 07:00:54",0.7276657824933688,0,5],...]
+    public class Zipper implements Func2<Map<String,?>, JSONArray, JSONArray> {
+        @Override
+        public JSONArray call(Map<String, ?> positionMap, JSONArray turns) {
+            for (Object o : turns) {
+                JSONArray turn = (JSONArray)o;
+                String startTime = turn.getString(0);
+                JSONObject busPosition = (JSONObject)positionMap.get(startTime);
+                if (busPosition != null) {
+                    //find busPosition
+                    int i = 1;
+                    for (; i <= busPosition.keySet().size(); i++) {
+                        long arriveTime = busPosition.getLongValue(String.valueOf(i));
+                        if(timestamp < arriveTime) break;
+                    }
+                    turn.add(i);
+                }
+            }
+            return turns;
+        }
+    }
+    @Autowired
+    private OCSUtil ocsUtil;
+    private long timestamp;
+    public GetPositionFlatMapper(long timestamp) {
+        this.timestamp = timestamp;
+    }
+    @Override
+    public Observable<JSONArray> call(JSONArray allturns) {
+        List<String> keys = new ArrayList<>();
+        for (Object o : allturns) {
+            keys.add(((JSONArray) o).getString(0));
+        }
+
+        Observable<Map<String, ?>> ocsObservable = ocsUtil.asyncGetBulkData(keys);
+        Observable<JSONArray> JSONArrayObservable = Observable.just(allturns);
+        return Observable.zip(ocsObservable, JSONArrayObservable, new Zipper());
+    }
+
+}

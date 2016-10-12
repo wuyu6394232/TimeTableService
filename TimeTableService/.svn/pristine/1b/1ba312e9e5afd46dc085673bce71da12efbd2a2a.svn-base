@@ -1,0 +1,27 @@
+package com.yg.timetableservice.rxjava;
+
+import com.alibaba.fastjson.JSONArray;
+import org.springframework.web.context.request.async.DeferredResult;
+import rx.Subscriber;
+
+
+public class ReturnResultSubscriber extends Subscriber<JSONArray> {
+    private DeferredResult<String> deferredResult;
+    @Override
+    public void onCompleted() {
+    }
+
+    @Override
+    public void onError(Throwable throwable) {
+        deferredResult.setResult(throwable.toString());
+    }
+
+    @Override
+    public void onNext(JSONArray res) {
+        deferredResult.setResult(res.toJSONString());
+    }
+    public ReturnResultSubscriber(DeferredResult<String> deferredResult) {
+        this.deferredResult = deferredResult;
+    }
+
+}
